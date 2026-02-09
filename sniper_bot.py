@@ -81,6 +81,14 @@ async def process_token_data(data, engine):
         return
 
     # Logic
+    # 1. Dev Sniping checks
+    creator = data.get('traderPublicKey')
+    if creator and creator in config.TARGET_DEVS:
+        print(f"🚨 DEV SNIPE! Creator {creator} launched {mint}!")
+        await execute_buy(mint, mcap, engine)
+        return
+
+    # 2. Mcap Strategy
     if config.TARGET_MCAP_MIN_SOL <= mcap <= config.TARGET_MCAP_MAX_SOL:
         print(f"🎯 Token {mint} matches Mcap req: {mcap} SOL")
         await execute_buy(mint, mcap, engine)
