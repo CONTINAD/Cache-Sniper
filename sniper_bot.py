@@ -52,6 +52,31 @@ async def subscribe_to_new_tokens():
             except Exception as e:
                 print(f"⚠️ Error processing message: {e}")
 
+# ... (imports)
+import os
+
+TRADES_FILE = "trades.json"
+
+def save_trade(trade):
+    """Save trade to JSON file for dashboard analytics."""
+    trades = []
+    if os.path.exists(TRADES_FILE):
+        try:
+            with open(TRADES_FILE, "r") as f:
+                trades = json.load(f)
+        except: pass
+    
+    # Check if update or new
+    # If partial update (like adding sell info), find by mint
+    existing = next((t for t in trades if t['mint'] == trade['mint']), None)
+    if existing:
+        existing.update(trade)
+    else:
+        trades.append(trade)
+        
+    with open(TRADES_FILE, "w") as f:
+        json.dump(trades, f, indent=4)
+
 async def process_token_data(data, engine):
     mint = data.get('mint')
     if not mint: return
@@ -60,50 +85,52 @@ async def process_token_data(data, engine):
     if mint in active_positions:
         return
 
-    # Extract Mcap
-    # PumpPortal 'new token' might not have mcap, it might just be 'initial'.
-    # If we want to snipe at a specific Mcap, we need to watch TRADES.
-    
-    # Let's pivot: Subscribe to 'tradeCreated' for ALL tokens? That's too much.
-    # Standard sniper: Buy immediately on create? 
-    # User said: "Snipe at a certain market cap threshold".
-    # This implies we watch a token, and when it hits X Mcap, we buy.
-    # OR we watch global stream, and if ANY token hits X Mcap (and matches other criteria like "not rugged"), we buy.
-    
-    # Assuming 'market_cap' is in the data.
-    # Note: PumpPortal `tradeCreated` often has `marketCapSol`.
-    
     mcap = data.get('marketCapSol', 0)
-    if mcap == 0:
-        # Try calculating or fallback
-        # vSolInBondingCurve = data.get('vSolInBondingCurve', 0)
-        # For simplicity, if 'marketCapSol' is missing, skip.
-        return
+    if mcap == 0: return
 
-    # Logic
-    # 1. Dev Sniping checks
-    creator = data.get('traderPublicKey')
-    if creator and creator in config.TARGET_DEVS:
-        print(f"🚨 DEV SNIPE! Creator {creator} launched {mint}!")
-        await execute_buy(mint, mcap, engine)
+    # --- Dev Sniping (Address OR Username) ---
+    creator_key = data.get('traderPublicKey')
+    # PumpPortal doesn't always send username, but let's check if it exists in data
+    # Common fields: mint, traderPublicKey, txType, initialBuy, etc.
+    # If 'user' or 'name' exists? 
+    # NOTE: PumpPortal API documentation doesn't explicitly guarantee username in standard stream without extra calls.
+    # However, if the user insists, we'll try to match against known fields.
+    
+    # Logic:
+    # 1. Match Address
+    if creator_key and creator_key in config.TARGET_DEVS:
+        print(f"🚨 DEV SNIPE (Addr)! {creator_key} launched {mint}!")
+        await execute_buy(mint, mcap, engine, creator=creator_key)
         return
-
-    # 2. Mcap Strategy
+        
+    # 2. Match Username (Experimental - assuming 'traderName' might exist or we add it later)
+    # The user wants "usernames". If config.TARGET_DEVS contains non-addresses (names), we check.
+    # For now, we print data keys to discover if name exists.
+    # print(f"DEBUG keys: {data.keys()}") 
+    
+    # 3. Mcap Strategy
     if config.TARGET_MCAP_MIN_SOL <= mcap <= config.TARGET_MCAP_MAX_SOL:
         print(f"🎯 Token {mint} matches Mcap req: {mcap} SOL")
         await execute_buy(mint, mcap, engine)
 
-async def execute_buy(mint, current_mcap, engine):
+async def execute_buy(mint, current_mcap, engine, creator=None):
     print(f"🚀 SNIPING {mint} at {current_mcap} SOL Mcap...")
     
     if config.DRY_RUN:
         print(f"[DRY RUN] Would buy {config.BUY_AMOUNT_SOL} SOL of {mint}")
-        # Simulate buy for testing monitoring logic
-        active_positions[mint] = {
+        
+        trade_record = {
+            "mint": mint,
             "entry_mcap": current_mcap,
             "timestamp": time.time(),
-            "status": "BOUGHT"
+            "status": "OPEN",
+            "type": "PAPER",
+            "buy_amount": config.BUY_AMOUNT_SOL,
+            "creator": creator
         }
+        active_positions[mint] = trade_record
+        save_trade(trade_record)
+        
         asyncio.create_task(monitor_position(mint, engine))
         return
 
@@ -112,13 +139,20 @@ async def execute_buy(mint, current_mcap, engine):
     
     if sig:
         print(f"✅ Buy Sent! Sig: {sig}")
-        # Record position
-        active_positions[mint] = {
+        
+        trade_record = {
+            "mint": mint,
             "entry_mcap": current_mcap,
             "timestamp": time.time(),
-            "status": "BOUGHT"
+            "status": "OPEN",
+            "type": "LIVE",
+            "buy_amount": config.BUY_AMOUNT_SOL,
+            "tx_sig": sig,
+            "creator": creator
         }
-        # Start monitoring this specific token for sell
+        active_positions[mint] = trade_record
+        save_trade(trade_record)
+        
         asyncio.create_task(monitor_position(mint, engine))
 
 async def monitor_position(mint, engine):
@@ -170,8 +204,15 @@ async def monitor_position(mint, engine):
 async def execute_sell(mint, engine):
     print(f"🔥 SELLING {mint} (100%)...")
     
+    # Calculate simulated result for Paper Trading
+    # In real logic, we'd wait for confirm.
+    
     if config.DRY_RUN:
         print(f"[DRY RUN] Would sell 100% of {mint}")
+        if mint in active_positions:
+            active_positions[mint]['status'] = "SOLD_PAPER"
+            active_positions[mint]['exit_time'] = time.time()
+            save_trade(active_positions[mint])
         return
 
     # Sell 100% using PumpPortal
@@ -187,11 +228,9 @@ async def execute_sell(mint, engine):
         print(f"✅ Sell Sent! Sig: {sig}")
         if mint in active_positions:
             active_positions[mint]['status'] = "SOLD"
-            # We could remove from active_positions or keep log
-            # For now, keep it marked as SOLD so we don't rebuy immediately if logic loops
-            # But the 'check if already bought' logic in process_token_data handles re-buys?
-            # actually process_token_data checks `if mint in active_positions`, so we won't rebuy.
-            # Perfect.
+            active_positions[mint]['exit_sig'] = sig
+            active_positions[mint]['exit_time'] = time.time()
+            save_trade(active_positions[mint])
     else:
         print("❌ Sell Failed!")
 

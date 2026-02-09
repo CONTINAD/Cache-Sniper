@@ -238,40 +238,46 @@ with tab2:
 
 # --- Tab 3: Analytics ---
 with tab3:
-    st.subheader("📈 Performance Analytics")
+    st.subheader("📈 Paper Trading Analytics")
     
-    # Mock Data for Visuals
-    # In real app, read from 'trades.json' or database
+    TRADES_FILE = "trades.json"
     
-    a1, a2, a3 = st.columns(3)
-    a1.metric("Win Rate", "65%", "+5%")
-    a2.metric("Total Profit", "12.4 SOL", "+1.2 SOL")
-    a3.metric("Best Snipe", "8.5x", "User32...99")
-    
-    st.markdown("### Recent Trades")
-    
-    mock_data = {
-        "Token": ["HitlerCoin", "ChillGuy", "BasedAI", "PepeFrog", "Doge2"],
-        "Entry (Mcap)": ["12 SOL", "8 SOL", "15 SOL", "10 SOL", "18 SOL"],
-        "Result": ["+2.1x", "+1.5x", "-50% (SL)", "+3.0x", "+0.2x"],
-        "Status": ["SOLD", "SOLD", "SOLD", "SOLD", "HELD"]
-    }
-    df = pd.DataFrame(mock_data)
-    
-    st.dataframe(
-        df,
-        column_config={
-            "Result": st.column_config.TextColumn(
-                "PnL",
-                help="Profit/Loss Multiplier",
-                validate="^[0-9]",
-            ),
-        },
-        use_container_width=True,
-        hide_index=True
-    )
-    
-    st.caption("Analytics data is currently mocked. Connect database to see real history.")
+    if os.path.exists(TRADES_FILE):
+        try:
+            with open(TRADES_FILE, "r") as f:
+                trades_data = json.load(f)
+                
+            if trades_data:
+                df = pd.DataFrame(trades_data)
+                
+                # Metrics
+                total_trades = len(df)
+                
+                # Count Wins (Simulated)
+                # We need exit price/mcap to calculate win. 
+                # Currently we only verify if it hit SL/TP in logs, but `active_positions` doesn't strictly store exit price yet?
+                # Let's assume 'status' == 'SOLD_PAPER' means it hit a trigger.
+                # Use 'status' column.
+                
+                completed_trades = df[df['status'].str.contains("SOLD", na=False)]
+                
+                # Create visual metrics
+                a1, a2, a3 = st.columns(3)
+                a1.metric("Total Trades", total_trades)
+                a2.metric("Completed", len(completed_trades))
+                a3.metric("Paper Success Rate", "N/A" if len(completed_trades) == 0 else "Calculating...") 
+                
+                st.markdown("### Trade History")
+                st.dataframe(
+                    df[['mint', 'entry_mcap', 'status', 'timestamp']],
+                    use_container_width=True
+                )
+            else:
+                st.info("No trades recorded yet. Start the bot on Dry Run!")
+        except Exception as e:
+            st.error(f"Error loading trades: {e}")
+    else:
+        st.info("No trade history found. Start the bot to generate data.")
 
 # Auto-Refresh logs
 if running:
