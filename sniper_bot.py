@@ -91,23 +91,10 @@ async def process_token_data(data, engine):
 
     # --- Dev Sniping (Address OR Username) ---
     creator_key = data.get('traderPublicKey')
-    # PumpPortal doesn't always send username, but let's check if it exists in data
     # Common fields: mint, traderPublicKey, txType, initialBuy, etc.
     # If 'user' or 'name' exists? 
     # NOTE: PumpPortal API documentation doesn't explicitly guarantee username in standard stream without extra calls.
     # However, if the user insists, we'll try to match against known fields.
-    
-    # Logic:
-    # 1. Match Address
-    if creator_key and creator_key in config.TARGET_DEVS:
-        print(f"🚨 DEV SNIPE (Addr)! {creator_key} launched {mint}!")
-        await execute_buy(mint, mcap, engine, creator=creator_key)
-        return
-        
-    # 2. Match Username (Experimental - assuming 'traderName' might exist or we add it later)
-    # The user wants "usernames". If config.TARGET_DEVS contains non-addresses (names), we check.
-    # For now, we print data keys to discover if name exists.
-    # print(f"DEBUG keys: {data.keys()}") 
     
     # 3. Mcap Strategy
     if config.TARGET_MCAP_MIN_SOL <= mcap <= config.TARGET_MCAP_MAX_SOL:
@@ -240,3 +227,37 @@ if __name__ == "__main__":
         asyncio.run(subscribe_to_new_tokens())
     except KeyboardInterrupt:
         print("🛑 Bot Stopped.")
+
+# --- Helpers ---
+
+WATCHLIST_FILE = "watchlist.json"
+
+def load_watchlist():
+    if os.path.exists(WATCHLIST_FILE):
+        try:
+            with open(WATCHLIST_FILE, "r") as f:
+                return json.load(f)
+        except: return []
+    return []
+
+# Simple cache for resolved usernames to save API calls
+user_cache = {}
+
+async def resolve_username(pubkey):
+    """Fetch Pump.fun profile to get username."""
+    if pubkey in user_cache:
+        return user_cache[pubkey]
+        
+    url = f"https://frontend-api.pump.fun/users/{pubkey}"
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url, timeout=2) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    # API structure usually: { "username": "...", "twitter": "..." }
+                    username = data.get('username') or data.get('twitter_handle')
+                    if username:
+                        user_cache[pubkey] = username
+                        return username
+        except: pass
+    return None
