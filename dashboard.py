@@ -207,10 +207,24 @@ with tab2:
         sl = st.number_input("Stop Loss %", 0.1, 0.99, 0.5, help="0.5 means 50% loss")
         
     st.markdown("---")
-    st.markdown("#### 👨‍💻 Dev Sniping")
+    st.markdown("#### 👨‍💻 Dev Sniping (Addresses)")
     st.caption("Automatically buy any token launched by these addresses.")
-    
     devs_str = st.text_area("Target Dev Addresses (One per line)", height=100, placeholder="Address1\nAddress2...")
+    
+    st.markdown("---")
+    st.markdown("#### 📋 Dev Watchlist (Usernames)")
+    st.caption("Automatically buy any token launched by these Pump.fun usernames.")
+    
+    # Load watchlist
+    watchlist_path = "watchlist.json"
+    current_watchlist = []
+    if os.path.exists(watchlist_path):
+        try:
+            with open(watchlist_path, "r") as f:
+                current_watchlist = json.load(f)
+        except: pass
+        
+    watchlist_str = st.text_area("Target Usernames (One per line, no @)", value="\n".join(current_watchlist), height=150)
     
     st.markdown("---")
     dry_run_mode = st.toggle("🧪 Dry Run Mode (Simulation)", value=True, help="Disable to trade real money.")
@@ -219,12 +233,20 @@ with tab2:
         # Parse devs
         dev_list = [d.strip() for d in devs_str.split('\n') if d.strip()]
         
+        # Parse watchlist
+        watchlist_list = [w.strip() for w in watchlist_str.split('\n') if w.strip()]
+        
+        # Save watchlist.json
+        with open("watchlist.json", "w") as f:
+            json.dump(watchlist_list, f, indent=4)
+            
+        # Save config
         with open(CONFIG_PATH, "w") as f:
             f.write("import os\n")
             f.write("from dotenv import load_dotenv\n\n")
             f.write("load_dotenv()\n\n")
             f.write(f'SOLANA_PRIVATE_KEY = os.getenv("SOLANA_PRIVATE_KEY")\n')
-            f.write(f'RPC_URL = os.getenv("RPC_URL", "https://api.mainnet-beta.solana.com")\n')
+            f.write(f'RPC_URL = os.getenv("RPC_URL", "https://mainnet.helius-rpc.com/?api-key=d319b384-85ac-4f12-bd1f-18458edc923b")\n')
             f.write(f'PRIORITY_FEE = float(os.getenv("PRIORITY_FEE", "0.001"))\n\n')
             f.write(f"TARGET_MCAP_MIN_SOL = {min_mcap}\n")
             f.write(f"TARGET_MCAP_MAX_SOL = {max_mcap}\n")
@@ -234,7 +256,7 @@ with tab2:
             f.write(f"TARGET_DEVS = {json.dumps(dev_list)}\n")
             f.write(f"CHECK_INTERVAL = 2.0\n")
             f.write(f"DRY_RUN = {dry_run_mode}\n")
-        st.success("Configuration saved! Restart bot to apply changes.")
+        st.success("Configuration & Watchlist saved!")
 
 # --- Tab 3: Analytics ---
 with tab3:
