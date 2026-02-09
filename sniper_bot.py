@@ -3,6 +3,7 @@ import json
 import ssl
 import websockets
 import time
+import aiohttp
 from src.solana_utils import SolanaEngine
 import sniper_config as config
 

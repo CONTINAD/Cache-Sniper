@@ -5,7 +5,7 @@ load_dotenv()
 
 # --- Wallet & RPC ---
 SOLANA_PRIVATE_KEY = os.getenv("SOLANA_PRIVATE_KEY")
-RPC_URL = os.getenv("RPC_URL", "https://api.mainnet-beta.solana.com")
+RPC_URL = os.getenv("RPC_URL", "https://mainnet.helius-rpc.com/?api-key=d319b384-85ac-4f12-bd1f-18458edc923b")
 PRIORITY_FEE = float(os.getenv("PRIORITY_FEE", "0.001"))
 
 # --- Sniper Settings ---
