@@ -1,0 +1,84 @@
+/* Main Background */
+.stApp {
+    background-color: #0E1117;
+    color: #FAFAFA;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #161B22;
+    border-right: 1px solid #30363D;
+}
+
+/* Metric Cards */
+div[data-testid="stMetricValue"] {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2rem !important;
+}
+
+div[data-testid="metric-container"] {
+    background-color: #1F2937; /* Dark Gray Card */
+    border: 1px solid #374151;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s;
+}
+
+div[data-testid="metric-container"]:hover {
+    transform: translateY(-2px);
+    border-color: #00FF94; /* Neon Green Hover */
+}
+
+/* Titles and Headers */
+h1, h2, h3 {
+    font-family: 'Inter', sans-serif;
+    color: #E6E6E6;
+}
+
+h1 {
+    text-shadow: 0 0 10px rgba(0, 255, 148, 0.3); /* Neon Glow */
+}
+
+/* DataFrames */
+.stDataFrame {
+    border: 1px solid #30363D;
+    border-radius: 5px;
+}
+
+/* Plotly Charts */
+.js-plotly-plot .plotly .modebar {
+    display: none !important;
+}
+
+/* Custom Success/Error Colors for Text */
+.positive-pnl {
+    color: #00FF94 !important; /* Neon Green */
+    font-weight: bold;
+}
+
+.negative-pnl {
+    color: #FF4B4B !important; /* Neon Red */
+    font-weight: bold;
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 20px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    white-space: pre-wrap;
+    background-color: transparent;
+    border-radius: 4px 4px 0px 0px;
+    gap: 1px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.stTabs [aria-selected="true"] {
+    background-color: transparent;
+    border-bottom: 2px solid #00FF94;
+    color: #00FF94;
+}

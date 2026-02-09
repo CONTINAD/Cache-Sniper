@@ -1,0 +1,11 @@
+discord.py
+python-dotenv
+aiohttp
+streamlit
+pandas
+plotly
+
+solana
+solders
+websockets
+base58
