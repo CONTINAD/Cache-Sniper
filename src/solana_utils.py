@@ -16,9 +16,17 @@ from src.config import SOLANA_PRIVATE_KEY, RPC_URL, PRIORITY_FEE
 class SolanaEngine:
     def __init__(self):
         self.rpc_client = AsyncClient(RPC_URL)
-        self.payer = Keypair.from_base58_string(SOLANA_PRIVATE_KEY)
-        self.pubkey = str(self.payer.pubkey())
-        print(f"🔑 Loaded Wallet: {self.pubkey}")
+        try:
+            if SOLANA_PRIVATE_KEY:
+                self.payer = Keypair.from_base58_string(SOLANA_PRIVATE_KEY)
+                self.pubkey = str(self.payer.pubkey())
+                print(f"🔑 Loaded Wallet: {self.pubkey}")
+            else:
+                raise ValueError("No private key")
+        except Exception as e:
+            print(f"⚠️ No valid Private Key found ({e}). Running in READ-ONLY / DRY RUN mode.")
+            self.payer = None
+            self.pubkey = "PaperTradingWallet111111111111111111111111"
 
     async def get_sol_balance(self) -> float:
         """Fetch SOL balance."""

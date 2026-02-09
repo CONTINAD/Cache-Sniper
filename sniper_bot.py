@@ -175,21 +175,19 @@ async def monitor_position(mint, engine):
                 # Take Profit
                 if pnl_mult >= config.TAKE_PROFIT_MULTIPLIER:
                     print(f"🤑 Take Profit Triggered! {pnl_mult:.2f}x")
-                    await execute_sell(mint, engine)
+                    await execute_sell(mint, engine, exit_mcap=current_mcap)
                     break
                 
                 # Stop Loss
-                # if pnl_mult <= (1.0 - config.STOP_LOSS_PERCENTAGE):
-                # Using straightforward percentage of entry
                 if current_mcap <= (entry_mcap * (1.0 - config.STOP_LOSS_PERCENTAGE)):
                     print(f"🛑 Stop Loss Triggered! {pnl_mult:.2f}x")
-                    await execute_sell(mint, engine)
+                    await execute_sell(mint, engine, exit_mcap=current_mcap)
                     break
                     
             except Exception as e:
                 print(f"Error monitoring {mint}: {e}")
 
-async def execute_sell(mint, engine):
+async def execute_sell(mint, engine, exit_mcap=None):
     print(f"🔥 SELLING {mint} (100%)...")
     
     # Calculate simulated result for Paper Trading
@@ -200,6 +198,13 @@ async def execute_sell(mint, engine):
         if mint in active_positions:
             active_positions[mint]['status'] = "SOLD_PAPER"
             active_positions[mint]['exit_time'] = time.time()
+            if exit_mcap:
+                active_positions[mint]['exit_mcap'] = exit_mcap
+                # Calc PnL
+                entry = active_positions[mint].get('entry_mcap', 1)
+                pnl = (exit_mcap - entry) / entry * 100
+                active_positions[mint]['pnl_pct'] = pnl
+                
             save_trade(active_positions[mint])
         return
 
