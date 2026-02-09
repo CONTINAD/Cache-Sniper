@@ -23,7 +23,13 @@ async def subscribe_to_new_tokens():
     print(f"🎯 Target Mcap: {config.TARGET_MCAP_MIN_SOL} - {config.TARGET_MCAP_MAX_SOL} SOL")
     print(f"🎯 Buy Amount: {config.BUY_AMOUNT_SOL} SOL")
 
-    async with websockets.connect(uri, ssl=ssl_context) as websocket:
+    # Headers to mimic browser and avoid 403
+    custom_headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Origin": "https://pumpportal.fun"
+    }
+
+    async with websockets.connect(uri, ssl=ssl_context, additional_headers=custom_headers) as websocket:
         # Subscribe to new token creation events and trades
         # "tradeCreated" gives us Mcap data more frequently
         payload = {
