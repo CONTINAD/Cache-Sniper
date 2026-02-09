@@ -17,6 +17,10 @@ TARGET_MCAP_MAX_SOL = 20.0
 # Buy Amount in SOL
 BUY_AMOUNT_SOL = 0.05
 
+# --- Dev Sniping ---
+# List of Developer Wallets to automaticallly snipe when they launch a coin
+TARGET_DEVS = []
+
 # --- Selling Parameters ---
 # Take Profit (TP) Multiplier (e.g., 2.0 = 2x, 100% gain)
 TAKE_PROFIT_MULTIPLIER = 2.0
