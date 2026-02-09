@@ -290,8 +290,12 @@ with tab3:
                 a3.metric("Paper Success Rate", "N/A" if len(completed_trades) == 0 else "Calculating...") 
                 
                 st.markdown("### Trade History")
+                
+                # Format for display
+                df['PnL'] = df.get('pnl_pct', 0).apply(lambda x: f"{x:+.2f}%" if pd.notnull(x) else "OPEN")
+                
                 st.dataframe(
-                    df[['mint', 'entry_mcap', 'status', 'timestamp']],
+                    df[['mint', 'entry_mcap', 'status', 'PnL', 'timestamp']],
                     use_container_width=True
                 )
             else:
